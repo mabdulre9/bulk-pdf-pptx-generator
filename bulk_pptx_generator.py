@@ -105,7 +105,7 @@ def extract_placeholders(pptx_path: Path) -> List[str]:
     print_header("Extracting placeholders from template")
     
     placeholders = set()
-    placeholder_pattern = re.compile(r'\{\{(\w+)\}\}')
+    placeholder_pattern = re.compile(r'\{\{([^}]+)\}\}')
     
     try:
         # Create temporary directory
@@ -123,8 +123,14 @@ def extract_placeholders(pptx_path: Path) -> List[str]:
         if slides_dir.exists():
             for slide_file in slides_dir.glob('slide*.xml'):
                 content = slide_file.read_text(encoding='utf-8')
-                found = placeholder_pattern.findall(content)
-                placeholders.update(found)
+                
+                # Remove all XML tags to get continuous text
+                # This handles split placeholders across multiple <a:t> tags
+                text_only = re.sub(r'<[^>]+>', '', content)
+                
+                # Now find placeholders in the continuous text
+                found = placeholder_pattern.findall(text_only)
+                placeholders.update(ph.strip() for ph in found)
         
         # Clean up
         shutil.rmtree(temp_dir)
@@ -236,33 +242,42 @@ def get_filename_format(mapping: Dict[str, str]) -> str:
     
     return filename_format
 
-
 def replace_placeholders_in_xml(xml_content: str, replacements: Dict[str, str]) -> str:
-    """Replace placeholders in XML content, handling split placeholders."""
+    """Replace placeholders in XML content, handling split placeholders and case sensitivity."""
     
-    # Replace placeholders
-    for placeholder, value in replacements.items():
-        # Simple case: direct replacement
-        xml_content = xml_content.replace(f'{{{{{placeholder}}}}}', str(value))
+    # Create a case-insensitive version of replacements
+    # Map lowercase placeholder names to their values
+    replacements_lower = {}
+    for key, value in replacements.items():
+        replacements_lower[key.lower()] = str(value)
+    
+    # Find all placeholders in the XML (even if split across tags)
+    # First, remove XML tags to get continuous text
+    text_only = re.sub(r'<[^>]+>', '', xml_content)
+    
+    # Find all {{placeholder}} patterns
+    placeholder_pattern = re.compile(r'\{\{([^}]+)\}\}')
+    found_placeholders = set(ph.strip() for ph in placeholder_pattern.findall(text_only))
+    
+    # For each found placeholder, replace it in the XML
+    for placeholder in found_placeholders:
+        # Check if we have a replacement for this placeholder (case-insensitive)
+        replacement_value = replacements_lower.get(placeholder.lower())
         
-        # Handle cases where placeholder might be split across tags
-        pattern = re.compile(
-            r'(<a:t[^>]*>[^<]*)\{\{([^}]*)</a:t>(<a:t[^>]*>)([^}]*)\}\}',
-            re.DOTALL
-        )
-        
-        def replace_split(match):
-            before = match.group(1)
-            part1 = match.group(2)
-            middle = match.group(3)
-            part2 = match.group(4)
+        if replacement_value is not None:
+            # Replace all occurrences of {{placeholder}} with the value
+            # Use a regex that handles the placeholder potentially split across tags
             
-            full_placeholder = part1 + part2
-            if full_placeholder == placeholder:
-                return before + str(value) + '</a:t>' + middle
-            return match.group(0)
-        
-        xml_content = pattern.sub(replace_split, xml_content)
+            # Build a flexible pattern that matches the placeholder even if split
+            chars = list(placeholder)
+            pattern_parts = []
+            for char in chars:
+                # Each character might be followed by XML tags
+                pattern_parts.append(re.escape(char) + r'(?:</[^>]+>(?:<[^>]+>)*)?')
+            
+            pattern = r'\{\{' + ''.join(pattern_parts) + r'\}\}'
+            
+            xml_content = re.sub(pattern, replacement_value, xml_content, flags=re.DOTALL)
     
     return xml_content
 
