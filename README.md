@@ -164,7 +164,7 @@ Enter your filename format (without .pdf extension):
 - Input: `Invoice_{{date}}_{{name}}` → Output: `Invoice_2024-03-15_John Smith.pdf`
 - Press Enter to use the first column as filename
 
-## 📁 Output
+## Output
 
 The script will create:
 - **PDF files**: One for each row in your data file (in the output directory)
@@ -212,7 +212,7 @@ pip install comtypes
 - Close other applications to free up memory
 - Don't use your computer for other tasks while the script runs
 
-## 💡 Tips and Best Practices
+## Tips and Best Practices
 
 ### Template Design
 1. **Test with one record first**: Create a test data file with one row to verify your template
@@ -242,7 +242,7 @@ pip install comtypes
 2. **Simple templates**: Templates with fewer slides and simpler formatting convert faster
 3. **Close other programs**: Free up system resources for PowerPoint
 
-## 📝 Example Workflow
+## Example Workflow
 
 ### Certificate Generation Example
 
