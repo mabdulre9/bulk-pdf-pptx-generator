@@ -1,4 +1,4 @@
-# 📄 Bulk PowerPoint to PDF Generator
+# 📄 Bulk PowerPoint & PDF Generator
 
 An automated tool for generating personalized PDF documents from PowerPoint templates using data from CSV or Excel files. This tool allows for mass-production of certificates, reports, or personalized presentations by mapping data columns to template placeholders.
 
